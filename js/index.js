@@ -1,7 +1,5 @@
 var diary;
 var mainView;
-var iOS = false;
-var imgDir;
 
 document.addEventListener('deviceready', deviceready, false);
 
@@ -10,18 +8,9 @@ function deviceready() {
 
 	//create a new instance of our Diary and listen for it to complete it's setup
 	diary = new Diary();
+	diary.setup(startApp);
 
-	if(device.platform === "iOS") {
-		iOS = true;
-		window.requestFileSystem(LocalFileSystem.PERSISTENT, 0, 
-		function(fs) {
-			imgDir = fs.root;
-			diary.setup(startApp);
-		}, 
-		null);
-	} else {
-		diary.setup(startApp);
-	}
+
 }
 
 /*
@@ -58,7 +47,7 @@ function pageLoad(u) {
 		};
 	}
 
-	$.get(u,function(res,code) {
+$.get(u,function(res,code) {
 		mainView.html(res);
 		var evt = document.createEvent('CustomEvent');
 		evt.initCustomEvent("pageload",true,true,data);
@@ -77,13 +66,13 @@ $(document).on("pageload", "#mainPage", function(e) {
 		$("#entryList").html(s);
 
 		//Listen for add clicks
-		$("#addEntryBtn").on("touchend", function(e) {
+		$("#addEntryBtn").on("touchstart", function(e) {
 			e.preventDefault();
 			pageLoad("add.html");
 		});
 
 		//Listen for entry clicks
-		$("#entryList div").on("touchend", function(e) { 
+		$("#entryList div").on("touchstart", function(e) { 
 			e.preventDefault();
 			console.log("entry click");
 			var id = $(this).data("id");
@@ -111,9 +100,7 @@ $(document).on("pageload", "#addPage", function(e) {
 	function onCamSuccess(imgdata) {
 		console.log(imgdata);
 		$("#entryPicture").val(imgdata);
-		console.log('set the file');
 		$("#imgPreview").attr("src", imgdata);
-		console.log('set the attr');
 	}
 	
 	function onCamFail(e) {
@@ -123,9 +110,8 @@ $(document).on("pageload", "#addPage", function(e) {
 	
 	$("#takePicture").on("touchstart", function(e) {
 		e.preventDefault();
-		e.stopPropagation();
+		
 		navigator.camera.getPicture(onCamSuccess, onCamFail, {quality:50, destinationType:Camera.DestinationType.FILE_URI});
-		return false;
 	});
 	
 	$("#addEntrySubmit").on("touchstart", function(e) {
@@ -134,32 +120,12 @@ $(document).on("pageload", "#addPage", function(e) {
 		var title = $("#entryTitle").val();
 		var body = $("#entryBody").val();
 		var img = $("#entryPicture").val();
-		
-		//if iOS, we need to move the image
-		if(iOS && img.length > 0) {
-			var fileName = img.split("/").pop();
-			console.log("fileName="+fileName);
-			
-			window.resolveLocalFileSystemURI(img, function(entry) {
-				entry.moveTo(imgDir, fileName);
-				img = entry.toURL();
-				//store!
-				diary.saveEntry({title:title,body:body,image:img}, function() {
-					pageLoad("main.html");
-				});
-			}, function() {
-				console.log('fail in resolve');
-			});
-
-		} else {
-			//store!
-			diary.saveEntry({title:title,body:body,image:img}, function() {
-				pageLoad("main.html");
-			});
-		}
+		//store!
+		diary.saveEntry({title:title,body:body,image:img}, function() {
+			pageLoad("main.html");
+		});
 		
 	});
-
 });
 
 
